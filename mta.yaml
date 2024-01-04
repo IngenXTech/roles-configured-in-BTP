@@ -1,0 +1,93 @@
+_schema-version: "3.2"
+ID: pco
+description: Fiori elements app
+version: 0.0.1
+modules:
+- name: pco-dest-content
+  type: com.sap.application.content
+  requires:
+  - name: pco-destination-service
+    parameters:
+      content-target: true
+  - name: pco-repo-host
+    parameters:
+      service-key:
+        name: pco-repo-host-key
+  - name: pco-uaa
+    parameters:
+      service-key:
+        name: pco-uaa-key
+  parameters:
+    content:
+      instance:
+        destinations:
+        - Name: pco_repo_host
+          ServiceInstanceName: pco-html5-srv
+          ServiceKeyName: pco-repo-host-key
+          sap.cloud.service: pco
+        - Authentication: OAuth2UserTokenExchange
+          Name: pco_uaa
+          ServiceInstanceName: pco-xsuaa-srv
+          ServiceKeyName: pco-uaa-key
+          sap.cloud.service: pco
+        existing_destinations_policy: update
+  build-parameters:
+    no-source: true
+- name: pco-app-content
+  type: com.sap.application.content
+  path: .
+  requires:
+  - name: pco-repo-host
+    parameters:
+      content-target: true
+  build-parameters:
+    build-result: resources
+    requires:
+    - artifacts:
+      - customer.zip
+      name: customer
+      target-path: resources/
+- name: customer
+  type: html5
+  path: customer
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+resources:
+- name: pco-uaa
+  type: org.cloudfoundry.managed-service
+  parameters:
+    path: ./xs-security.json
+    service: xsuaa
+    service-name: pco-xsuaa-srv
+    service-plan: application
+- name: pco-destination-service
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      HTML5Runtime_enabled: true
+      init_data:
+        instance:
+          destinations:
+          - Authentication: NoAuthentication
+            Name: ui5
+            ProxyType: Internet
+            Type: HTTP
+            URL: https://ui5.sap.com
+          existing_destinations_policy: update
+      version: 1.0.0
+    service: destination
+    service-name: pco-destination-service
+    service-plan: lite
+- name: pco-repo-host
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: html5-apps-repo
+    service-name: pco-html5-srv
+    service-plan: app-host
+parameters:
+  deploy_mode: html5-repo
